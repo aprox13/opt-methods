@@ -1,5 +1,7 @@
-import matplotlib.pyplot as plt
 import math
+
+import matplotlib.pyplot as plt
+
 
 def grid_image_item(image, title=None, y_label=None, x_label=None):
     def inner(ax):
