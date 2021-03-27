@@ -55,6 +55,11 @@ class SearchResult:
         self.calls_count = calls_count
         self.x = x
 
+    def final_range(self):
+        if len(self.ranges) != 0:
+            return self.ranges[-1]
+        raise KeyError("There is emtpy ranges")
+
     @staticmethod
     def of(ranges: Ranges, func: TargetFunction):
         calls = func.calls
@@ -175,6 +180,7 @@ class Fib:
         self._fib[item] = self[item - 1] + self[item - 2]
         return self._fib[item]
 
+
 class Fibonacci(OneDimSearch):
 
     def __init__(self, fib: Fib, L: float = None):
@@ -227,10 +233,3 @@ class Fibonacci(OneDimSearch):
 
         result.append(current_range.copy())
         return SearchResult.of(result, func)
-
-
-
-
-
-
-
