@@ -36,7 +36,7 @@ class Rosenbrock(Function):
 
     def hessian(self, x: np.ndarray):
         return [
-            [-400 * (x[1] - x[0] ** 2) + 800 * x[0] ** 2 + 1, -400 * x[0]],
+            [-400 * (x[1] - x[0] ** 2) + 800 * x[0] ** 2 + 2, -400 * x[0]],
             [-400 * x[0], 200]
         ]
 
