@@ -4,3 +4,5 @@ matplotlib~=3.3.4
 tqdm~=4.59.0
 ipynb-py-convert==0.4.6
 scipy~=1.6.2
+pytest~=6.2.3
+ipython~=7.22.0
