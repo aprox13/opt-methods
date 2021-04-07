@@ -1,17 +1,9 @@
 import math
-from abc import ABC
-from typing import List, Callable
+from typing import List
 
+import numpy as np
 
-class TargetFunction:
-    calls = 0
-
-    def apply(self, x: float) -> float:
-        raise NotImplementedError("function not implemented")
-
-    def __call__(self, x) -> float:
-        self.calls += 1
-        return self.apply(x)
+from core.extended_function import ExtendedFunction
 
 
 class Range:
@@ -61,40 +53,18 @@ class SearchResult:
         raise KeyError("There is emtpy ranges")
 
     @staticmethod
-    def of(ranges: Ranges, func: TargetFunction):
-        calls = func.calls
+    def of(ranges: Ranges, func: ExtendedFunction):
+        calls = func.apply_cache.calls
 
         x = ranges[-1].center()
-        result = func(x)
+        result = func(np.array([x]))
         return SearchResult(x, result, ranges, len(ranges), calls)
-
-
-class CachedFunction(TargetFunction, ABC):
-    _cache = {}
-
-    def __call__(self, x: float) -> float:
-        if x in self._cache:
-            return self._cache[x]
-        self._cache[x] = super().__call__(x)
-        return self._cache[x]
-
-    def has_cache(self):
-        return len(self._cache) != 0
-
-
-class OneDimFunction(CachedFunction):
-    def __init__(self, func: Callable[[float], float]):
-        self.func = func
-        self._cache = {}
-
-    def apply(self, x: float) -> float:
-        return self.func(x)
 
 
 class OneDimSearch:
     support_calls_count = 0
 
-    def search(self, r: Range, func: TargetFunction, eps: float) -> SearchResult:
+    def search(self, r: Range, func: ExtendedFunction, eps: float) -> SearchResult:
         raise NotImplementedError("search not impl")
 
 
@@ -106,10 +76,9 @@ class Dichotomy(OneDimSearch):
         else:
             self.C = -1
 
-    def search(self, r: Range, func: TargetFunction, eps: float) -> SearchResult:
+    def search(self, r: Range, func: ExtendedFunction, eps: float) -> SearchResult:
         lf = func(r.left)
         rf = func(r.right)
-
         func.calls = 0
 
         if lf * rf > 0:
@@ -143,7 +112,7 @@ class GoldenSection(OneDimSearch):
         else:
             self.C = -1
 
-    def search(self, r: Range, func: TargetFunction, eps: float) -> SearchResult:
+    def search(self, r: Range, func: ExtendedFunction, eps: float) -> SearchResult:
         func.calls = 0
 
         def x1x2(rng: Range) -> (float, float):
@@ -183,8 +152,10 @@ class Fib:
 
 class Fibonacci(OneDimSearch):
 
-    def __init__(self, fib: Fib, L: float = None):
+    def __init__(self, fib: Fib = None, L: float = None):
         self.fib = fib
+        if fib is None:
+            self.fib = Fib()
         self.L = L
 
     def _lambda(self, r: Range, n, k):
@@ -193,7 +164,7 @@ class Fibonacci(OneDimSearch):
     def _mu(self, r: Range, n, k):
         return r.left + (self.fib[n - k - 1] / self.fib[n - k]) * (r.right - r.left)
 
-    def search(self, r: Range, func: TargetFunction, eps: float) -> SearchResult:
+    def search(self, r: Range, func: ExtendedFunction, eps: float) -> SearchResult:
         func.calls = 0
         n = 0
 

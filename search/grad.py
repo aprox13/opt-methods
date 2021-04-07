@@ -1,112 +1,96 @@
-from inspect import signature
+from typing import Optional
 
-import numpy as np
-
+from core.extended_functions import DelegateFunction
 from one_dim_search import *
+from utils import eq_tol
 
 
-class FunctionWithGrad:
-    def __init__(self, f: Callable[[np.ndarray], float], grad_f: Callable[[np.ndarray], np.ndarray]):
+class StepStrategy:
+    prev_step = None
+
+    def __init__(self, f: ExtendedFunction, eps: float = None):
         self.f = f
-        self.grad_f = grad_f
+        self.eps = eps or 1e-7
 
-        assert len(signature(f).parameters) == len(signature(grad_f).parameters) == 1
+    def calculate_step(self, x: np.ndarray):
+        raise NotImplementedError
 
-    def __call__(self, point: np.ndarray) -> float:
-        return self.f(point)
-
-    def grad(self, point: np.ndarray) -> np.ndarray:
-        return self.grad_f(point)
-
-
-class Paraboloid(FunctionWithGrad):
-    def __init__(self):
-        super(Paraboloid, self).__init__(
-            f=lambda p: p[0] ** 2 + p[1] ** 2,
-            grad_f=lambda p: np.array([2 * p[0], 2 * p[1]])
-        )
-
-
-class GradDescent:
-
-    @staticmethod
-    def search(f: FunctionWithGrad,
-               start: np.ndarray,
-               step_f: Callable[[FunctionWithGrad, np.ndarray, np.ndarray], float],
-               stop_criterion: Callable[[FunctionWithGrad, np.ndarray, np.ndarray], bool]
-               ) -> List[np.ndarray]:
-        """
-
-        :param f: - target function with grad support
-        :param start: - starting point
-        :param step_f: - calculating current step. It takes target function, current point and gradients in this point
-        :param stop_criterion - determining if algorithm should stop. Takes function, previous and next point.
-        """
-        res = [np.copy(start)]
-
-        prev = start
-        while True:
-            grad = f.grad(prev)
-            step = step_f(f, prev, grad)
-            nxt = prev - step * grad
-            res.append(np.copy(nxt))
-
-            if stop_criterion(f, prev, nxt):
-                break
-
-            prev = nxt
-
+    def __call__(self, x: np.ndarray):
+        res = self.calculate_step(x)
+        assert res >= 0, 'negative step'
+        self.prev_step = res
         return res
 
 
-class ConstantStep:
-    def __init__(self, step: float):
-        self.step = step
+class DividePrevStrategy(StepStrategy):
+    def calculate_step(self, x: np.ndarray):
+        assert self.prev_step is not None
 
-    def __call__(self, f: FunctionWithGrad, point: np.ndarray, point_grad: np.ndarray):
-        return self.step
+        step = self.prev_step
+
+        x_new = x - step * self.f.grad(x)
+        fx = self.f(x)
+        while self.f(x_new) >= fx and step > self.eps:
+            step /= 2
+            x_new = x - step * self.f.grad(x)
+
+        return step
 
 
-class OneDimSearchStep:
-    def __init__(self, name: str, lin_d=0.01, lin_k=2, lin_eps=1e-3, one_dim_eps=1e-5, **search_kwargs):
-        if name == 'golden':
-            func = GoldenSection(find_min=True)
-        elif name == 'dichotomy':
-            func = Dichotomy(find_min=True)
-        elif name == 'fibonacci':
-            func = Fibonacci(**search_kwargs)
+class OneDimOptStrategy(StepStrategy):
+    _SUPPORTED = {'dichotomy', 'golden', 'fibonacci'}
+
+    def __init__(self, f: ExtendedFunction, method: str, search_range: Range, eps: float = None):
+        super().__init__(f, eps)
+
+        assert method in self._SUPPORTED, f'Unsupported method "{method}", expected one of {",".join(self._SUPPORTED)}'
+
+        if method == 'dichotomy':
+            self.method = Dichotomy()
+        elif method == 'golden':
+            self.method = GoldenSection()
         else:
-            raise RuntimeError(f'Function {name} is not supported')
+            self.method = Fibonacci()
 
-        self.ond_dim = func
-        self.lin_d = lin_d
-        self.lin_k = lin_k
-        self.one_dim_eps = one_dim_eps
-        self.lin_eps = lin_eps
+        self.rng = search_range.copy()
 
-    @staticmethod
-    def _lin(f: OneDimFunction, start: float, d: float, eps: float, k: float) -> Range:
-        assert d > 0
-        if f(start) < f(start + d):
-            d *= -1
+    def calculate_step(self, x: np.ndarray):
+        def target_f(step):
+            return self.f(x - step * self.f.grad(x))
 
-        start_y = f(start)
-        x = start + d
-        step = d
+        res = self.method.search(self.rng.copy(), DelegateFunction(func=target_f), self.eps)
+        return res.x
 
-        while f(x) <= start_y + eps:
-            step *= k
-            x += step
 
-        if d > 0:
-            return Range(start, x)
-        else:
-            return Range(x, start)
+class GradDescent:
+    _STOP_CRITERION = {'arg_margin', 'func_margin'}
 
-    def __call__(self, f: FunctionWithGrad, point: np.ndarray, point_grad: np.ndarray):
-        ff = OneDimFunction(func=lambda step: f(point - step * point_grad))
+    def search(self, f: ExtendedFunction,
+               start: np.ndarray,
+               step_strategy: StepStrategy,
+               stop_criterion: Optional[str] = None,
+               max_iters=10000,
+               initial_step=1,
+               eps=1e-8
+               ) -> np.ndarray:
+        assert stop_criterion is None or stop_criterion in self._STOP_CRITERION, f'Unknown stop criterion "{stop_criterion}" '
 
-        find_range = self._lin(ff, 0, d=self.lin_d, k=self.lin_k, eps=self.lin_eps)
-        result_range = self.ond_dim.search(r=find_range, func=ff, eps=self.one_dim_eps)
+        def stop_criterion(_prev_x, _x):
+            if stop_criterion == 'arg_margin':
+                return np.linalg.norm(_x, _prev_x) < eps
+            elif stop_criterion == 'func_margin':
+                return eq_tol(f(_x), f(_prev_x), eps)
+            return False
 
-        return result_range.final_range().center()
+        prev = start
+        step_strategy.prev_step = initial_step
+        for iteration in range(max_iters):
+            step = step_strategy(prev)
+
+            next_x = prev - step * f.grad(prev)
+            if stop_criterion(prev, next_x):
+                break
+
+            prev = next_x
+
+        return prev

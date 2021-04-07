@@ -2,14 +2,11 @@
 
 from tqdm import tqdm
 
+from core.extended_functions import MinusSin1
 from one_dim_search import *
 from utils.matplotlib_utils import *
 
-
 # %%
-
-def target_function():
-    return OneDimFunction(lambda x: -math.sin(x))
 
 
 RANGE = Range(0, 4)
@@ -30,7 +27,7 @@ RESULT = {}
 for eps in tqdm(TARGET_EPS):
     RESULT[eps] = {}
     for e_name, e in ENGINES.items():
-        RESULT[eps][e_name] = e.search(RANGE, target_function(), eps)
+        RESULT[eps][e_name] = e.search(RANGE, MinusSin1(), eps)
 
 engines_cnt = len(ENGINES)
 
