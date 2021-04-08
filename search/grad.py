@@ -1,7 +1,7 @@
 from typing import Optional, Callable, Any
 
 from core.extended_functions import DelegateFunction
-from one_dim_search import *
+from search.one_dim_search import *
 from utils import eq_tol
 
 

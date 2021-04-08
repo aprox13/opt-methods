@@ -77,12 +77,7 @@ class Dichotomy(OneDimSearch):
             self.C = -1
 
     def search(self, r: Range, func: ExtendedFunction, eps: float) -> SearchResult:
-        lf = func(r.left)
-        rf = func(r.right)
         func.calls = 0
-
-        if lf * rf > 0:
-            raise RuntimeError("Required distinct values at the ends of range")
 
         current_range = r.copy()
         result = [r.copy()]
