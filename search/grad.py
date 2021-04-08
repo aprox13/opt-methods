@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Callable, Any
 
 from core.extended_functions import DelegateFunction
 from one_dim_search import *
@@ -7,6 +7,10 @@ from utils import eq_tol
 
 class StepStrategy:
     prev_step = None
+
+    @property
+    def name(self) -> str:
+        raise NotImplementedError
 
     def __init__(self, f: ExtendedFunction, eps: float = None):
         self.f = f
@@ -23,6 +27,10 @@ class StepStrategy:
 
 
 class DividePrevStrategy(StepStrategy):
+    @property
+    def name(self) -> str:
+        return "divide"
+
     def calculate_step(self, x: np.ndarray):
         assert self.prev_step is not None
 
@@ -38,13 +46,17 @@ class DividePrevStrategy(StepStrategy):
 
 
 class OneDimOptStrategy(StepStrategy):
+    @property
+    def name(self) -> str:
+        return f'onedim/{self._m_name}'
+
     _SUPPORTED = {'dichotomy', 'golden', 'fibonacci'}
 
     def __init__(self, f: ExtendedFunction, method: str, search_range: Range, eps: float = None):
         super().__init__(f, eps)
 
         assert method in self._SUPPORTED, f'Unsupported method "{method}", expected one of {",".join(self._SUPPORTED)}'
-
+        self._m_name = method
         if method == 'dichotomy':
             self.method = Dichotomy()
         elif method == 'golden':
@@ -71,7 +83,8 @@ class GradDescent:
                stop_criterion: Optional[str] = None,
                max_iters=10000,
                initial_step=1,
-               eps=1e-8
+               eps=1e-8,
+               before_iteration: Callable[[int, np.ndarray], Any] = None
                ) -> np.ndarray:
         assert stop_criterion is None or stop_criterion in self._STOP_CRITERION, f'Unknown stop criterion "{stop_criterion}" '
 
@@ -85,6 +98,9 @@ class GradDescent:
         prev = start
         step_strategy.prev_step = initial_step
         for iteration in range(max_iters):
+            if before_iteration is not None:
+                before_iteration(iteration, np.copy(prev))
+
             step = step_strategy(prev)
 
             next_x = prev - step * f.grad(prev)

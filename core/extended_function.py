@@ -13,19 +13,23 @@ class Cached:
     def __call__(self, x: np.ndarray):
         self.reads += 1
 
-        key = tuple(x)
-        if key not in self._cache:
-            self._cache[key] = self.func(x)
-            self.calls += 1
+        try:
+            key = tuple(x)
+            if key not in self._cache:
+                self._cache[key] = self.func(x)
+                self.calls += 1
 
-        return self._cache[key]
+            return self._cache[key]
+        except TypeError:
+            self.calls += 1
+            return self.func(x)
 
 
 class ExtendedFunction:
 
     def __init__(self):
         self.apply_cache = Cached(self.apply)
-        self.grad_cache = Cached(self.grad)
+        self.grad_cache = Cached(self.grad_apply)
 
     def apply(self, x: np.ndarray) -> float:
         raise NotImplementedError("function not implemented")
@@ -36,13 +40,15 @@ class ExtendedFunction:
     def grad(self, x: np.ndarray) -> np.ndarray:
         return self.grad_cache(x)
 
-    def __call__(self, x: Union[np.ndarray, float, int]) -> float:
+    def __call__(self, x: Union[np.ndarray, float, int], unsafe=False) -> float:
 
         if isinstance(x, int) or isinstance(x, float):
             args = np.array([x])
         elif isinstance(x, np.ndarray):
             args = x
-        else:
+        elif not unsafe:
             raise RuntimeError(f"Unsupported type {type(x)} for func")
+        else:
+            args = x
 
         return self.apply_cache(args)
