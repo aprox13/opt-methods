@@ -1,4 +1,4 @@
-from typing import Optional, Callable, Any
+from typing import Optional, Callable, Any, Tuple
 
 from core.extended_functions import DelegateFunction
 from one_dim_search import *
@@ -77,23 +77,23 @@ class OneDimOptStrategy(StepStrategy):
 class GradDescent:
     _STOP_CRITERION = {'arg_margin', 'func_margin'}
 
-    def search(self, f: ExtendedFunction,
-               start: np.ndarray,
-               step_strategy: StepStrategy,
-               stop_criterion: Optional[str] = None,
-               max_iters=10000,
-               initial_step=1,
-               eps=1e-8,
-               before_iteration: Callable[[int, np.ndarray], Any] = None
-               ) -> np.ndarray:
+    def search_with_iterations(self, f: ExtendedFunction,
+                               start: np.ndarray,
+                               step_strategy: StepStrategy,
+                               stop_criterion: Optional[str] = None,
+                               max_iters=10000,
+                               initial_step=1,
+                               eps=1e-8,
+                               before_iteration: Callable[[int, np.ndarray], Any] = None,
+                               ) -> Tuple[np.ndarray, int]:
         assert stop_criterion is None or stop_criterion in self._STOP_CRITERION, f'Unknown stop criterion "{stop_criterion}" '
 
         def stop_criterion(_prev_x, _x):
             if stop_criterion == 'arg_margin':
                 return np.linalg.norm(_x, _prev_x) < eps
-            elif stop_criterion == 'func_margin':
+            else:
                 return eq_tol(f(_x), f(_prev_x), eps)
-            return False
+            # return False
 
         prev = start
         step_strategy.prev_step = initial_step
@@ -105,8 +105,27 @@ class GradDescent:
 
             next_x = prev - step * f.grad(prev)
             if stop_criterion(prev, next_x):
-                break
+                return prev, iteration
 
             prev = next_x
 
+        return prev, max_iters
+
+    def search(self, f: ExtendedFunction,
+               start: np.ndarray,
+               step_strategy: StepStrategy,
+               stop_criterion: Optional[str] = None,
+               max_iters=10000,
+               initial_step=1,
+               eps=1e-8,
+               before_iteration: Callable[[int, np.ndarray], Any] = None,
+               ) -> np.ndarray:
+        prev, _ = self.search_with_iterations(f,
+                                              start,
+                                              step_strategy,
+                                              stop_criterion,
+                                              max_iters,
+                                              initial_step,
+                                              eps,
+                                              before_iteration)
         return prev

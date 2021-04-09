@@ -36,3 +36,29 @@ class DelegateFunction(ExtendedFunction):
         super().__init__()
         self._f = func
         self._gf = grad_func
+
+
+class PureQuadraticFunction(ExtendedFunction):
+    def __init__(self, matrix: np.ndarray):
+        super().__init__()
+        self._f = lambda x: matrix.dot(x).dot(x)
+        self._gf = lambda x: np.dot(matrix, x)
+
+    def apply(self, x: np.ndarray) -> float:
+        return self._f(x)
+
+    def grad_apply(self, x: np.ndarray) -> np.ndarray:
+        return self._gf(x)
+
+
+class QuadraticFunction(ExtendedFunction):
+    def __init__(self, a: np.ndarray, b: np.ndarray, c: float):
+        super().__init__()
+        self._f = lambda x: a.dot(x).dot(x) + b.dot(x) + c
+        self._gf = lambda x: np.dot(a, x) + b
+
+    def apply(self, x: np.ndarray) -> float:
+        return self._f(x)
+
+    def grad_apply(self, x: np.ndarray) -> np.ndarray:
+        return self._gf(x)
