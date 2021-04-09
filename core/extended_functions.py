@@ -51,6 +51,10 @@ class DelegateFunction(ExtendedFunction):
 
 
 class PureQuadraticFunction(ExtendedFunction):
+    @property
+    def name(self):
+        return "pure-quadratic"
+
     def __init__(self, matrix: np.ndarray):
         super().__init__()
         self._f = lambda x: matrix.dot(x).dot(x)
@@ -64,6 +68,10 @@ class PureQuadraticFunction(ExtendedFunction):
 
 
 class QuadraticFunction(ExtendedFunction):
+    @property
+    def name(self):
+        return "quadratic-function"
+
     def __init__(self, a: np.ndarray, b: np.ndarray, c: float):
         super().__init__()
         self._f = lambda x: a.dot(x).dot(x) + b.dot(x) + c
