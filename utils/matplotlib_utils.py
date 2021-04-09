@@ -31,10 +31,10 @@ def axis_off():
 
 
 def draw_grid(data, drawer=default_drawer, ncols=2, batch_size=10, hspace=.5, row_coef=16 / 2.5):
-    if len(data) > batch_size != -1:
-        draw_grid(data[:batch_size], drawer, ncols, batch_size, hspace, row_coef)
-        draw_grid(data[batch_size:], drawer, ncols, batch_size, hspace, row_coef)
-        return
+    # if len(data) > batch_size != -1:
+    #     draw_grid(data[:batch_size], drawer, ncols, batch_size, hspace, row_coef)
+    #     draw_grid(data[batch_size:], drawer, ncols, batch_size, hspace, row_coef)
+    #     return
 
     nrows = math.ceil(len(data) / ncols)
 
