@@ -7,6 +7,10 @@ from core.extended_function import ExtendedFunction
 
 
 class Paraboloid(ExtendedFunction):
+    @property
+    def name(self):
+        return "x^2 + y^2"
+
     def apply(self, x: np.ndarray) -> float:
         return x[0] ** 2 + x[1] ** 2
 
@@ -15,6 +19,10 @@ class Paraboloid(ExtendedFunction):
 
 
 class MinusSin1(ExtendedFunction):
+
+    @property
+    def name(self):
+        return "-sin(x)"
 
     def apply(self, x: np.ndarray) -> float:
         return -math.sin(x[0])
@@ -36,6 +44,10 @@ class DelegateFunction(ExtendedFunction):
         super().__init__()
         self._f = func
         self._gf = grad_func
+
+    @property
+    def name(self):
+        return "delegate"
 
 
 class PureQuadraticFunction(ExtendedFunction):

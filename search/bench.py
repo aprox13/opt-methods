@@ -3,11 +3,8 @@
 from tqdm import tqdm
 
 from core.extended_functions import MinusSin1
-from one_dim_search import *
+from search.one_dim_search import *
 from utils.matplotlib_utils import *
-
-# %%
-
 
 RANGE = Range(0, 4)
 
@@ -31,9 +28,6 @@ for eps in tqdm(TARGET_EPS):
 
 engines_cnt = len(ENGINES)
 
-fig = plt.figure()
-
-
 def by_eps_plot(title: str, items: dict):
     def inner(ax):
         ax.set_title(title)
@@ -48,7 +42,6 @@ def by_eps_plot(title: str, items: dict):
         ax.legend()
 
     return inner
-
 
 def range_plt(e_name: str, eps: float):
     def _inner(ax):
@@ -70,7 +63,6 @@ def range_plt(e_name: str, eps: float):
         ax.plot(xx_right, yy)
 
     return _inner
-
 
 iter_by_eps = {}
 calls_by_eps = {}
@@ -101,5 +93,4 @@ grid = [
 for e_name in ENGINES.keys():
     grid.append(range_plt(e_name, 1e-4))
 
-# %%
 draw_grid(grid, ncols=engines_cnt)

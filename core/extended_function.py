@@ -52,3 +52,7 @@ class ExtendedFunction:
             args = x
 
         return self.apply_cache(args)
+
+    @property
+    def name(self):
+        raise NotImplementedError

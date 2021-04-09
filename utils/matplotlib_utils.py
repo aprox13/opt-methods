@@ -1,6 +1,7 @@
 import math
 
 import matplotlib.pyplot as plt
+from tqdm import trange
 
 
 def grid_image_item(image, title=None, y_label=None, x_label=None):
@@ -41,7 +42,7 @@ def draw_grid(data, drawer=default_drawer, ncols=2, batch_size=10, hspace=.5, ro
     fig.clf()
     fig.tight_layout()
     grid = plt.GridSpec(nrows, ncols, wspace=.25, hspace=hspace)
-    for i in range(nrows * ncols):
+    for i in trange(nrows * ncols):
         ax_i = i // ncols
         ax_j = i % ncols
         cur_ax = fig.add_subplot(grid[ax_i, ax_j])
