@@ -210,3 +210,20 @@ for s in SUPPLIERS:
                 start_point=np.array([10, 8]),
                 strategy_sup=s
                 )
+
+# %%
+"""
+фукция `f(x,y) = x^2 + 10 * y^2 + 5` c начальной точкой `[6, -8]`
+"""
+
+func = DelegateFunction(
+    func=lambda p: p[0] ** 2 + 10 * p[1] ** 2 + 5,
+    grad_func=lambda p: np.array([2 * p[0], 20 * p[1]])
+)
+
+# %%
+for s in SUPPLIERS:
+    grad_shower(func=func,
+                start_point=np.array([6, -8]),
+                strategy_sup=s
+                )
