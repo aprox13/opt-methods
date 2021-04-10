@@ -4,6 +4,8 @@ from simplex.sample_registry import IssueRegistry
 from simplex.solver import *
 from utils import *
 
+np.seterr(divide='ignore', invalid='ignore')
+
 registry = IssueRegistry.load('test_data.json')
 
 LAB_ISSUES = [registry[f'Lab example #{i}'] for i in range(1, 7 + 1)]
@@ -21,7 +23,7 @@ def compare_with_scipy_solver_max(issue: SimplexCanonicalIssue, target):
         return _solver.resolve_max(issue)
 
     scipy_solver_res = target_fun(SCIPY_SOLVER)
-    solver_res = target_fun(SimplexSolverImpl(eps))
+    solver_res = target_fun(SimplexV2(eps))
 
     assert not ((scipy_solver_res is None) ^ (solver_res is None))
 

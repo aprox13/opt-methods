@@ -1,8 +1,9 @@
-import math
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Callable
 
 import numpy as np
 import scipy.optimize as opt
+
+np.seterr(divide='ignore', invalid='ignore')
 
 
 def first_true_or_none(cond):
@@ -62,9 +63,9 @@ class SimplexCanonicalIssue:
         return np.copy(A), np.copy(b), np.copy(c)
 
     def __init__(self, A: np.ndarray, b: np.ndarray, c: np.ndarray, additional_vars_count=0):
-        self._A = np.copy(A)
-        self._b = np.copy(b)
-        self._c = np.copy(c)
+        self._A = np.array(np.copy(A), float)
+        self._b = np.array(np.copy(b), float)
+        self._c = np.array(np.copy(c), float)
         self.additional_vars_count = additional_vars_count
 
         assert len(b.shape) == 1, f"Required 1d vector for b, but got {b.shape}"
@@ -99,6 +100,9 @@ class SimplexCanonicalIssue:
     def is_from_lte(self):
         return self.additional_vars_count != 0
 
+    def __copy__(self):
+        return SimplexCanonicalIssue(self.A.copy(), self.b.copy(), self.c.copy(), int(self.additional_vars_count))
+
     def __repr__(self):
         return f'Issue{{A={self.A.shape}, is_lte={self.is_from_lte}, additional={self.additional_vars_count}}}'
 
@@ -122,102 +126,31 @@ class SimplexResult:
     def __eq__(self, other):
         return self.x == other.x
 
+    def __repr__(self):
+        return f'Result(x={self.x}, point=({", ".join(map(str, self._sol))}))'
+
 
 class SimplexSolver:
     def __init__(self, eps=1e-8):
         self.eps = eps
 
     def resolve_min(self, issue: SimplexCanonicalIssue) -> Optional[SimplexResult]:
-        res = self.resolve_max(issue.with_negate_function())
-        if res is not None:
-            return res.negated()
-        return None
+        raise NotImplementedError()
 
     def resolve_max(self, issue: SimplexCanonicalIssue) -> Optional[SimplexResult]:
         raise NotImplementedError()
 
+    @staticmethod
+    def negated_task(f: Callable[[SimplexCanonicalIssue], SimplexResult],
+                     issue: SimplexCanonicalIssue) -> Optional[SimplexResult]:
+        neg = issue.with_negate_function()
 
-class SimplexSolverImpl(SimplexSolver):
+        res = f(neg)
+        if res is not None:
+            f = res.solution @ issue.c if len(res.solution) != 0 else -res.x
+            return SimplexResult(f, res.solution)
 
-    def _gauss(self, A: np.ndarray, r, s):
-        n, m = A.shape
-
-        A[r, :m] /= A[r, s]
-        for i in range(n):
-            if r == i:
-                continue
-            A[i, 0:m] -= A[r, 0:m] * A[i, s]
-
-    def _has_solution(self, A: np.ndarray, B: np.ndarray) -> bool:
-        n, m = A.shape
-        while True:
-            s = first_true_or_none(A[0, 1:m] < 0)
-
-            if s is None:
-                return True
-            s += 1
-
-            r, t = None, math.inf
-            for i in range(1, n):
-                if A[i, s] > 0 and A[i, 0] / A[i, s] < t:
-                    r = i
-                    t = A[i, 0] / A[i, s]
-
-            if r is None:
-                return False
-
-            self._gauss(A, r, s)
-
-            B[r - 1] = s
-
-    def resolve_max(self, issue: SimplexCanonicalIssue) -> Optional[SimplexResult]:
-        A, b, c = issue.Abc
-
-        m, n = A.shape
-
-        A = np.hstack((A, np.eye(m)))
-
-        z = concat(np.zeros(1 + n), np.ones(m))
-        A = add_first_column(A, b)
-        A = add_first_row(A, z)
-
-        Bz = np.arange(n + 1, n + m + 1)
-        print('First A.shape', A.shape)
-
-        # уберем единицы в 1 строке
-        A[0] -= A[1: m + 1].sum(axis=0)
-        if not self._has_solution(A, Bz):
-            return None
-        if A[0, 0] < -self.eps:
-            return None
-        # set invariant B_z
-        for b_ind, s in enumerate(Bz):
-            if n < s:
-                r = single_one_index(A[1:m + 1, s]) + 1
-
-                k = first_true_or_none(A[r, 1:n + 1] != 0)
-
-                if k is None:
-                    A = np.delete(A, r, axis=0)
-                    Bz = np.delete(Bz, r - 1)
-                else:
-                    self._gauss(A, r, k + 1)
-                    Bz[b_ind] = k + 1
-
-        A = add_first_row(A[1:, 0:n + 1], concat([0], -c))
-
-        for i, s in enumerate(Bz, start=1):
-            if A[0, s] != 0:
-                A[0] -= A[i] * A[0, s]
-
-        # second phase
-        if not self._has_solution(A, Bz):
-            return None
-        solution = np.zeros(n)
-        for i, s in enumerate(Bz, start=1):
-            solution[s - 1] = A[i, 0]
-
-        return SimplexResult(A[0, 0], solution[:-issue.additional_vars_count])
+        return None
 
 
 class ScipySimplexSolver(SimplexSolver):
@@ -236,7 +169,6 @@ class ScipySimplexSolver(SimplexSolver):
 
         params['c'] = c
 
-        print('calling with params', params)
         res = opt.linprog(**params)
 
         if not res.success:
@@ -245,8 +177,66 @@ class ScipySimplexSolver(SimplexSolver):
             return SimplexResult(x=res.fun, solution=np.copy(res.x))
 
     def resolve_max(self, issue: SimplexCanonicalIssue) -> Optional[SimplexResult]:
-        res = self.resolve_min(issue.with_negate_function())
+        return self.negated_task(self.resolve_min, issue)
 
-        if res is not None:
-            return res.negated()
+
+class SimplexV2(SimplexSolver):
+    def resolve_min(self, issue: SimplexCanonicalIssue) -> Optional[SimplexResult]:
+        return self.negated_task(self.resolve_max, issue)
+
+    M = 1e12
+
+    def resolve_max(self, issue: SimplexCanonicalIssue) -> Optional[SimplexResult]:
+        A, b, c = issue.Abc
+
+        n, m = A.shape
+        eps = self.eps
+
+        A = np.hstack((A, np.eye(n)))
+        c = np.hstack((c, np.repeat(-self.M, n)))
+
+        result = (b * self.M).sum()
+        c = c + (A * self.M).sum(axis=0)
+
+        # начальное решение X = 0, X_new (базис) = b
+        basis = np.arange(n) + m
+
+        while c[c.argmax()] > 0:
+            max_elem_in_c_index = c.argmax()
+
+            resolving_colimn = b / A[:, max_elem_in_c_index]
+            minimal = np.inf
+
+            resolver_index = -1
+            for i in range(n):
+                if A[i, max_elem_in_c_index] > eps and resolving_colimn[i] <= minimal:
+                    resolver_index = i
+                    minimal = resolving_colimn[i]
+            if resolver_index == -1:
+                return None
+
+            basis[resolver_index] = max_elem_in_c_index
+
+            mul = c[max_elem_in_c_index] / A[resolver_index, max_elem_in_c_index]
+            c -= A[resolver_index] * mul
+            result -= b[resolver_index] * mul
+
+            for i in range(n):
+                if i == resolver_index:
+                    continue
+                mul = A[i, max_elem_in_c_index] / A[resolver_index, max_elem_in_c_index]
+                A[i] -= A[resolver_index] * mul
+                b[i] -= b[resolver_index] * mul
+
+        if abs(result) < self.M:
+            x = np.zeros(m)
+
+            for i in range(n):
+                x[basis[i]] = b[i] / A[i, basis[i]]
+
+            return SimplexResult(-result, x)
         return None
+
+
+def make_issue(A, b, c):
+    return SimplexCanonicalIssue(np.array(A), np.array(b), np.array(c))
