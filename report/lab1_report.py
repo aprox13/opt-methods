@@ -113,7 +113,6 @@ draw_grid(grid, ncols=engines_cnt)
 ### Покажем результат работы метода градиентного спуска на некоторых примерах
 """
 
-
 # %%
 def draw_grad_des(e_func: ExtendedFunction,
                   start: np.ndarray,
@@ -205,6 +204,7 @@ SUPPLIERS = [
 """
 
 # %%
+
 for s in SUPPLIERS:
     grad_shower(func=Paraboloid(),
                 start_point=np.array([10, 8]),
@@ -215,7 +215,9 @@ for s in SUPPLIERS:
 """
 фукция `f(x,y) = x^2 + 10 * y^2 + 5` c начальной точкой `[6, -8]`
 """
+
 # %%
+
 func = DelegateFunction(
     func=lambda p: p[0] ** 2 + 10 * p[1] ** 2 + 5,
     grad_func=lambda p: np.array([2 * p[0], 20 * p[1]])
