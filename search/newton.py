@@ -16,17 +16,33 @@ def get_d(hessian, grad: np.ndarray):
     return d
 
 
-def newton(f: Function, w0, eps=1e-9, stop_criterion=stop_criterion_dx):
+def is_pos_def(x):
+    return np.all(np.linalg.eigvals(x) > 0)
+
+
+def make_pos_def(x):
+    l = np.linalg.eigvals(x)
+    mu = (-l + 1) * np.eye(x.shape[0])
+    return x + mu
+
+
+def newton(f: Function, w0, eps=1e-8, stop_criterion=stop_criterion_dx):
     w0 = np.array(w0.copy(), np.float64)
     w = np.array(w0.copy(), np.float64)
     iterations = 0
     path = [w0]
-    first = True
-    while first or not stop_criterion(w, w0, eps):
-        first = False
-        delta_w = get_d(f.hessian(w), np.array(f.grad(w)))
-        w0 = w.copy()
-        w -= delta_w
-        path.append(w.copy())
+    for _ in range(10000):
+        grad = f.grad(w)
+        hess = f.hessian(w)
+
+        if not is_pos_def(hess):
+            hess = make_pos_def(hess)  # метод Марквардта
+
+        delta_w = get_d(hess, grad)
+        new_w = w - delta_w
+        if stop_criterion(new_w, w, eps):
+            return w, iterations, path
+        path.append(new_w.copy())
+        w = new_w
         iterations += 1
     return w, iterations, path

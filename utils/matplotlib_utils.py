@@ -1,7 +1,10 @@
 import math
 
 import matplotlib.pyplot as plt
-from tqdm import trange
+import numpy as np
+from tqdm import trange, tqdm
+
+from search.newton import newton
 
 
 def grid_image_item(image, title=None, y_label=None, x_label=None):
@@ -51,3 +54,33 @@ def draw_grid(data, drawer=default_drawer, ncols=2, batch_size=10, hspace=.5, ro
         else:
             plt.axis('off')
     plt.show()
+
+
+def draw_paths(f, path, x_min, x_max, x_step, y_min, y_max, y_step, levels, filter_mode=100):
+    x_s = np.arange(x_min, x_max, x_step)
+    y_s = np.arange(y_min, y_max, y_step)
+    z_s = np.array([[f(np.array([x, y])) for x in x_s] for y in y_s])
+
+    plt.contour(x_s, y_s, z_s, levels=levels)
+    col = ['red', 'green', 'blue']
+    algo = ['grad', 'grad_fr', 'newton']
+    for k, p in enumerate(path):
+        x_s = np.arange(x_min, x_max, x_step)
+        y_s = np.arange(y_min, y_max, y_step)
+        z_s = np.array([[f(np.array([x, y])) for x in x_s] for y in y_s])
+
+        plt.contour(x_s, y_s, z_s, levels=levels)
+        with np.printoptions(precision=8, suppress=True):
+            print('Algo: ', algo[k])
+            print('Result:', p[-1])
+            print('Iterations:', len(p))
+        points_to_show = [p[i] for i in range(len(p) - 1) if (i % filter_mode == 0) or i < 10]
+        points_to_show.append(p[-1])
+        for i in tqdm(range(len(points_to_show) - 1)):
+            cur_point = points_to_show[i]
+            next_point = points_to_show[i + 1]
+            # plt.scatter([cur_point[0]], [cur_point[1]], x = col[k])
+            plt.plot([cur_point[0], next_point[0]], [cur_point[1], next_point[1]], '.', c=col[k])
+            plt.plot([cur_point[0], next_point[0]], [cur_point[1], next_point[1]], c=col[k])
+        plt.grid()
+        plt.show()
