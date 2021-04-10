@@ -4,13 +4,6 @@ import sys
 sys.path.append('../')
 
 # %%
-"""
-### Продемонстрируем результат работы методов одномерного поиска минимума
-
-функция `f(x) = -sin(x)` на интервали `[0, 4]`
-"""
-
-# %%
 import matplotlib.pyplot as plt
 from IPython.display import Image
 
@@ -19,6 +12,15 @@ from IPython.display import Image
 ### Задание 1
 
 Каноническая орма ЗЛП
+"""
+
+# %%
+"""
+### Задание 2
+
+Метод естетвенного базиса - если в системе существует единичная подматрица
+
+Метод искусственного базиса - если добавить единичная подматрицу с помощью введение новых переменных
 """
 
 # %%
@@ -243,3 +245,15 @@ Image(filename='../simplex/img/task6_solve.png')
 
 ### Задание 7
 """
+
+# %%
+Image(filename='../simplex/img/task7.png')
+
+# %%
+"""
+### Задание 8
+
+"""
+
+# %%
+Image(filename='../simplex/img/task8.png')
