@@ -14,6 +14,11 @@ from IPython.display import Image
 Каноническая орма ЗЛП
 """
 
+
+# %%
+
+Image(filename='../simplex/img/task1.png')
+
 # %%
 """
 ### Задание 2
@@ -22,10 +27,6 @@ from IPython.display import Image
 
 Метод искусственного базиса - если добавить единичная подматрицу с помощью введение новых переменных
 """
-
-# %%
-
-Image(filename='../simplex/img/task1.png')
 
 # %%
 """
@@ -247,7 +248,7 @@ Image(filename='../simplex/img/task6_solve.png')
 """
 
 # %%
-Image(filename='../simplex/img/task7.png')
+Image(filename='../simplex/img/task8.png')
 
 # %%
 """
@@ -256,4 +257,4 @@ Image(filename='../simplex/img/task7.png')
 """
 
 # %%
-Image(filename='../simplex/img/task8.png')
+Image(filename='../simplex/img/task7.png')
