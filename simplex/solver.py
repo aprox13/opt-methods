@@ -198,7 +198,6 @@ class SimplexV2(SimplexSolver):
         result = (b * self.M).sum()
         c = c + (A * self.M).sum(axis=0)
 
-        # начальное решение X = 0, X_new (базис) = b
         basis = np.arange(n) + m
 
         while c[c.argmax()] > 0:
